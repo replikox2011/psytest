@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
   LayoutDashboard, ClipboardList, Shield, Brain, User,
-  LogOut, Menu, X, ChevronRight, Bell, Settings
+  LogOut, Menu, X, ChevronRight, Bell, Settings, Github
 } from 'lucide-react';
 
 const ROLE_LABELS = {
@@ -88,13 +88,22 @@ export default function Layout({ children }) {
             })}
           </nav>
 
-          {/* Logout */}
-          <div className="p-4 border-t border-white/10">
+          {/* Logout & Footer */}
+          <div className="p-4 border-t border-white/10 space-y-2">
             <button onClick={handleLogout}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/60 hover:bg-red-500/20 hover:text-red-400 transition-all duration-200">
               <LogOut className="w-5 h-5" />
               <span className="font-medium text-sm">Выйти</span>
             </button>
+            <a
+              href="https://github.com/replikox2011/psytest"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 py-1.5 text-xs text-white/40 hover:text-white/80 transition-colors"
+            >
+              <Github className="w-3.5 h-3.5" />
+              <span className="font-mono">/replikox2011/psytest</span>
+            </a>
           </div>
         </div>
       </aside>
@@ -150,22 +159,47 @@ export default function Layout({ children }) {
                 );
               })}
             </nav>
-            <div className="p-4 border-t border-white/10">
+            <div className="p-4 border-t border-white/10 space-y-2">
               <button onClick={handleLogout}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/20 transition-all">
                 <LogOut className="w-5 h-5" />
                 <span className="font-medium text-sm">Выйти</span>
               </button>
+              <a
+                href="https://github.com/replikox2011/psytest"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 py-1.5 text-xs text-white/40 hover:text-white/80 transition-colors"
+              >
+                <Github className="w-3.5 h-3.5" />
+                <span className="font-mono">/replikox2011/psytest</span>
+              </a>
             </div>
           </div>
         </div>
       )}
 
       {/* Main content */}
-      <main className="lg:ml-64 pt-14 lg:pt-0 relative z-10">
-        <div className="p-4 lg:p-8 min-h-screen">
+      <main className="lg:ml-64 pt-14 lg:pt-0 relative z-10 flex flex-col min-h-screen">
+        <div className="p-4 lg:p-8 flex-1">
           {children}
         </div>
+
+        {/* Footer */}
+        <footer className="border-t border-white/10 px-4 lg:px-8 py-4 mt-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-white/50 bg-black/20 backdrop-blur-sm">
+          <p className="text-center sm:text-left">
+            PsychSystem &copy; {new Date().getFullYear()} &bull; Muhammad al-Xorazmiy nomidagi ixtisoslashtirilgan maktabi
+          </p>
+          <a
+            href="https://github.com/replikox2011/psytest"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-all border border-white/10 hover:border-white/20 group"
+          >
+            <Github className="w-4 h-4 transition-transform group-hover:scale-110" />
+            <span className="font-mono">/replikox2011/psytest</span>
+          </a>
+        </footer>
       </main>
     </div>
   );

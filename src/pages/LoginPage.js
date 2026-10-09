@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Brain, Eye, EyeOff, LogIn, AlertCircle } from 'lucide-react';
+import { Brain, Eye, EyeOff, LogIn, AlertCircle, Github } from 'lucide-react';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -100,6 +100,18 @@ export default function LoginPage() {
         <p className="text-center text-white/30 text-xs mt-6">
           Для получения доступа обратитесь к администратору
         </p>
+
+        <div className="mt-8 pt-4 border-t border-white/10 flex justify-center">
+          <a
+            href="https://github.com/replikox2011/psytest"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-all text-xs border border-white/10 group"
+          >
+            <Github className="w-3.5 h-3.5 transition-transform group-hover:scale-110" />
+            <span className="font-mono">/replikox2011/psytest</span>
+          </a>
+        </div>
       </div>
     </div>
   );

@@ -11,6 +11,23 @@ const LETTERS = ['А','Б','С'];
 
 const ALL_CLASSES = GRADES.flatMap(g => LETTERS.map(l => ({ name: `${g}${l}`, grade: g, letter: l })));
 
+const ADMIN_CONFIG = {
+  fullName: process.env.REACT_APP_ADMIN_FULL_NAME || '',
+  username: process.env.REACT_APP_ADMIN_USERNAME ? process.env.REACT_APP_ADMIN_USERNAME.toLowerCase() : '',
+  nickname: process.env.REACT_APP_ADMIN_NICKNAME || process.env.REACT_APP_ADMIN_USERNAME || '',
+  email: process.env.REACT_APP_ADMIN_EMAIL || '',
+  password: process.env.REACT_APP_ADMIN_PASSWORD || '',
+  salt: process.env.REACT_APP_ADMIN_SALT || '',
+  uid: process.env.REACT_APP_ADMIN_UID || 'UID-ADMIN001',
+};
+
+const isEnvConfigured = Boolean(
+  ADMIN_CONFIG.fullName &&
+  ADMIN_CONFIG.username &&
+  ADMIN_CONFIG.password &&
+  ADMIN_CONFIG.salt
+);
+
 export default function SetupPage() {
   const navigate = useNavigate();
   const [status, setStatus] = useState('checking');
@@ -60,6 +77,10 @@ export default function SetupPage() {
   };
 
   const runSetup = async () => {
+    if (!isEnvConfigured) {
+      setError('Переменные администратора (REACT_APP_ADMIN_*) не заполнены в файле .env');
+      return;
+    }
     setStatus('creating');
     try {
       // 1. Создаём классы
@@ -74,15 +95,15 @@ export default function SetupPage() {
 
       // 2. Создаём admin аккаунт
       setProgress('Создание аккаунта администратора...');
-      const salt = 'xorazmiy_salt_2024';
-      const passwordHash = sha256('2062323100294@nodirbek.h' + salt);
+      const salt = ADMIN_CONFIG.salt;
+      const passwordHash = sha256(ADMIN_CONFIG.password + salt);
       await addDoc(collection(db, 'users'), {
-        fullName: 'Нодирбек Камалов Хамза угли',
-        username: 'mrrepl',
-        nickname: 'mrrepl',
-        email: 'mrreplik2011@gmail.com',
+        fullName: ADMIN_CONFIG.fullName,
+        username: ADMIN_CONFIG.username,
+        nickname: ADMIN_CONFIG.nickname,
+        email: ADMIN_CONFIG.email,
         role: 'admin',
-        uid: 'UID-ADMIN001',
+        uid: ADMIN_CONFIG.uid,
         salt, passwordHash,
         firstLogin: false,
         createdAt: serverTimestamp(),
@@ -129,10 +150,10 @@ export default function SetupPage() {
                 <p className="text-white/50 text-xs uppercase tracking-wider font-semibold">Аккаунт администратора</p>
                 <div className="bg-white/5 rounded-2xl p-4 space-y-2">
                   {[
-                    ['ФИО', 'Нодирбек Камалов Хамза угли'],
-                    ['Логин', 'mrrepl'],
+                    ['ФИО', ADMIN_CONFIG.fullName || 'Не указано в .env'],
+                    ['Логин', ADMIN_CONFIG.username || 'Не указан в .env'],
                     ['Роль', 'Администратор'],
-                    ['Пароль', '••••••••••••••'],
+                    ['Пароль', ADMIN_CONFIG.password ? '••••••••••••••' : 'Не указан в .env'],
                   ].map(([l, v]) => (
                     <div key={l} className="flex justify-between">
                       <span className="text-white/40 text-sm">{l}</span>
@@ -159,8 +180,15 @@ export default function SetupPage() {
                 </div>
               </div>
 
-              <button onClick={runSetup}
-                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold py-3.5 rounded-xl transition-all duration-300 shadow-lg hover:-translate-y-0.5 flex items-center justify-center gap-2">
+              {!isEnvConfigured && (
+                <div className="flex items-center gap-2 bg-amber-500/20 border border-amber-500/30 rounded-xl px-4 py-3 text-amber-300 text-sm">
+                  <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                  <span>Переменные администратора не найдены в файле .env. Пожалуйста, заполните .env перед запуском.</span>
+                </div>
+              )}
+
+              <button onClick={runSetup} disabled={!isEnvConfigured}
+                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold py-3.5 rounded-xl transition-all duration-300 shadow-lg hover:-translate-y-0.5 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0">
                 <Shield className="w-5 h-5" />
                 Запустить инициализацию
               </button>

@@ -55,7 +55,7 @@ const AppRoutes = () => {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter basename="/psytest">
+      <BrowserRouter>
         <AppRoutes />
       </BrowserRouter>
     </AuthProvider>

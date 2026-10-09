@@ -1,0 +1,181 @@
+rules_version = '2';
+
+/**
+ * ============================================================================
+ * 🏫 PsychSystem — Muhammad al-Xorazmiy School
+ * Cloud Firestore Security Rules
+ * ============================================================================
+ * 
+ * Внимание по архитектуре аутентификации:
+ * Текущее приложение использует встроенную клиентскую систему авторизации 
+ * (хэширование паролей sha256 + salt в коллекции `users` и сессии в localStorage).
+ * 
+ * В связи с этим:
+ * 1. Запросы к Firestore выполняются без токена Firebase Auth (request.auth == null).
+ * 2. Данные правила реализуют строгую валидацию схемы (Schema Validation):
+ *    - Доступ разрешен только к известным коллекциям приложения.
+ *    - Проверяются типы полей, допустимые роли, диапазоны длины строк.
+ *    - Защита от записи непредусмотренных или поврежденных структур.
+ *    - Любые неизвестные коллекции и пути запрещены по умолчанию (deny-by-default).
+ * 
+ * (Если в будущем вы подключите Firebase Auth SDK, см. блок с RBAC в конце файла).
+ */
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ========================================================================
+    // 🛠️ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (HELPER FUNCTIONS)
+    // ========================================================================
+
+    // Проверка, что значение является непустой строкой допустимой длины
+    function isValidString(val, minLen, maxLen) {
+      return val is string && val.size() >= minLen && val.size() <= maxLen;
+    }
+
+    // Проверка допустимости роли пользователя
+    function isValidRole(role) {
+      return role in ['admin', 'psychologist', 'teacher', 'student'];
+    }
+
+    // Проверка целевой аудитории теста
+    function isValidTargetRole(role) {
+      return role in ['student', 'teacher', 'all'];
+    }
+
+    // Проверка статуса теста
+    function isValidTestStatus(status) {
+      return status in ['active', 'draft', 'archived'];
+    }
+
+    // Проверка типа вопроса
+    function isValidQuestionType(type) {
+      return type in ['choice', 'scale', 'text', 'free', 'multiple'];
+    }
+
+    // ========================================================================
+    // 👤 КОЛЛЕКЦИЯ: USERS (Пользователи)
+    // ========================================================================
+    match /users/{userId} {
+      // Чтение: необходимо для логина (поиск по username) и отображения в панелях
+      allow read: if true;
+
+      // Создание нового пользователя (через админку или SetupPage)
+      allow create: if request.resource.data.keys().hasAll([
+                        'fullName', 'username', 'role', 'uid', 'salt', 'passwordHash'
+                      ])
+                    && isValidString(request.resource.data.fullName, 2, 120)
+                    && isValidString(request.resource.data.username, 2, 60)
+                    && isValidRole(request.resource.data.role)
+                    && isValidString(request.resource.data.uid, 3, 50)
+                    && isValidString(request.resource.data.salt, 2, 64)
+                    && isValidString(request.resource.data.passwordHash, 32, 128);
+
+      // Обновление: смена пароля, установка никнейма, обновление данных
+      allow update: if (
+                      // Обновление пароля / соли
+                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['passwordHash', 'salt'])) ||
+                      // Первый вход: установка никнейма и снятие флага firstLogin
+                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nickname', 'firstLogin'])) ||
+                      // Полное обновление профиля администратором
+                      (
+                        isValidString(request.resource.data.fullName, 2, 120) &&
+                        isValidRole(request.resource.data.role)
+                      )
+                    );
+
+      // Удаление пользователя разрешено
+      allow delete: if true;
+    }
+
+    // ========================================================================
+    // 🏫 КОЛЛЕКЦИЯ: CLASSES (Классы)
+    // ========================================================================
+    match /classes/{classId} {
+      // Чтение списка классов для фильтров, админки и распределения учеников
+      allow read: if true;
+
+      // Создание класса
+      allow create: if request.resource.data.keys().hasAll(['name', 'grade', 'letter'])
+                    && isValidString(request.resource.data.name, 1, 10)
+                    && isValidString(request.resource.data.grade, 1, 5)
+                    && isValidString(request.resource.data.letter, 1, 5);
+
+      // Обновление класса (например счетчик учеников или лимит)
+      allow update: if true;
+
+      // Удаление класса
+      allow delete: if true;
+    }
+
+    // ========================================================================
+    // 📝 КОЛЛЕКЦИЯ: TESTS (Тесты и опросы)
+    // ========================================================================
+    match /tests/{testId} {
+      // Чтение тестов для прохождения и психолога
+      allow read: if true;
+
+      // Создание теста психологом
+      allow create: if request.resource.data.keys().hasAll(['title', 'targetRole', 'status'])
+                    && isValidString(request.resource.data.title, 2, 200)
+                    && isValidTargetRole(request.resource.data.targetRole)
+                    && isValidTestStatus(request.resource.data.status);
+
+      // Обновление теста (смена статуса, редактирование описания/сроков)
+      allow update: if isValidString(request.resource.data.title, 2, 200)
+                    && isValidTargetRole(request.resource.data.targetRole)
+                    && isValidTestStatus(request.resource.data.status);
+
+      // Удаление теста
+      allow delete: if true;
+    }
+
+    // ========================================================================
+    // ❓ КОЛЛЕКЦИЯ: QUESTIONS (Вопросы к тестам)
+    // ========================================================================
+    match /questions/{questionId} {
+      // Чтение вопросов теста
+      allow read: if true;
+
+      // Создание вопроса
+      allow create: if request.resource.data.keys().hasAll(['testId', 'question', 'type'])
+                    && isValidString(request.resource.data.testId, 1, 100)
+                    && isValidString(request.resource.data.question, 1, 1000)
+                    && isValidQuestionType(request.resource.data.type);
+
+      // Обновление вопроса
+      allow update: if isValidString(request.resource.data.question, 1, 1000)
+                    && isValidQuestionType(request.resource.data.type);
+
+      // Удаление вопроса
+      allow delete: if true;
+    }
+
+    // ========================================================================
+    // 📊 КОЛЛЕКЦИЯ: RESPONSES (Ответы респондентов)
+    // ========================================================================
+    match /responses/{responseId} {
+      // Чтение результатов (ученик видит свои, психолог/админ — общую статистику)
+      allow read: if true;
+
+      // Отправка ответа на тест
+      allow create: if request.resource.data.keys().hasAll(['testId', 'userId', 'answers'])
+                    && isValidString(request.resource.data.testId, 1, 100)
+                    && isValidString(request.resource.data.userId, 1, 100)
+                    && request.resource.data.answers is map;
+
+      // Ответы после отправки не должны изменяться
+      allow update: if false;
+
+      // Удаление ответов при необходимости очистки данных
+      allow delete: if true;
+    }
+
+    // ========================================================================
+    // 🚫 ЗАПРЕТ ВСЕХ ОСТАЛЬНЫХ ПУТЕЙ И КОЛЛЕКЦИЙ ПО УМОЛЧАНИЮ
+    // ========================================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

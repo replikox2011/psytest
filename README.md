@@ -24,30 +24,39 @@ npm start
 - Mode: **Production**
 - Region: `asia-southeast1` (ближайший)
 
-### 3. Скопируйте конфиг в `src/firebase/config.js`:
-```js
-const firebaseConfig = {
-  apiKey: "ваш-api-key",
-  authDomain: "ваш-проект.firebaseapp.com",
-  projectId: "ваш-project-id",
-  storageBucket: "ваш-проект.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123:web:abc"
-};
+### 3. Создайте `.env` файл на основе `.env.example`:
+Скопируйте пример файла конфигурации:
+```bash
+cp .env.example .env
 ```
+И заполните переменные в `.env`:
+```env
+# Firebase
+REACT_APP_FIREBASE_API_KEY=ваш_api_key
+REACT_APP_FIREBASE_AUTH_DOMAIN=ваш_проект.firebaseapp.com
+REACT_APP_FIREBASE_PROJECT_ID=ваш_project_id
+REACT_APP_FIREBASE_STORAGE_BUCKET=ваш_проект.appspot.com
+REACT_APP_FIREBASE_MESSAGING_SENDER_ID=ваш_sender_id
+REACT_APP_FIREBASE_APP_ID=ваш_app_id
+
+# Данные администратора для инициализации (/setup)
+REACT_APP_ADMIN_FULL_NAME=Ваше ФИО
+REACT_APP_ADMIN_USERNAME=логин_админа
+REACT_APP_ADMIN_EMAIL=admin@school.uz
+REACT_APP_ADMIN_PASSWORD=ваш_надежный_пароль
+REACT_APP_ADMIN_SALT=любая_секретная_соль
+```
+> 🔒 Файл `.env` добавлен в `.gitignore` и никогда не попадет в публичный репозиторий.
+
 
 ### 4. Правила Firestore (`Firestore > Rules`):
+Правила безопасности вынесены в файл [firestore.rules](file:///Users/nodirbek/nodirbek/school-projects/psytest/firestore.rules).
+
+Скопируйте содержимое файла в **Firebase Console → Firestore Database → Rules** или выполните деплой через Firebase CLI:
+```bash
+firebase deploy --only firestore:rules
 ```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
-    }
-  }
-}
-```
-> ⚠️ Для продакшена настройте более строгие правила!
+> 🛡️ Правила содержат строгую валидацию схем для коллекций `users`, `classes`, `tests`, `questions`, `responses` и запрет на произвольные коллекции.
 
 ### 5. Создайте первого администратора вручную в Firestore
 В коллекции `users` создайте документ:
